@@ -26,3 +26,42 @@ const path = require('path')
 在使用 Webpack 对项目进行构建时，会对大量文件进行解析和处理。当文件数量变多之后，Webpack 构件速度就会变慢。由于运行在 Node.js 之上的 Webpack 是单线程模型的，所以 Webpack 需要处理的任务要一个一个进行操作
 
 而 Happypack 的作用就是将文件解析任务分解成多个子进程并发执行。子进程处理完任务后再将结果发送给主进程。所以可以大大提升 Webpack 的项目构建速度
+
+### Usage
+
+```js
+var os = require('os')
+var path = requore('path')
+var HappyPack = require('happypack')
+var happyThreadPool = HappyPack.ThreadPool({ size: os.cpus().length })
+
+module.exports = {
+  ...
+  module: {
+    rules: [
+      {
+        test: /\.js$/,
+        // use: ['babel-loader?cacheDirectory'] 之前是使用这种方式直接使用 loader
+        // 现在用下面的方式替换成 happypack/loader，并使用 id 指定创建的 HappyPack 插件
+        use: ['happypack/loader?id=babel'],
+        exclude: /node_module/
+      }
+    ]
+  },
+  plugins: [
+    ...,
+    new HappyPack({
+      // id 标识符，要和 rules 中指定的 id 对应起来
+      id: 'babel',
+      // 代表共享进程池，即多个 HappyPack 实例都使用同一个共享进程池中的子进程去处理任务，以防止资源占用过多
+      threadPool: happyThreadPool,
+      // 使用的loader
+      use: [
+        {
+          loader: 'babel-loader?cacheDirectory'
+        }
+      ]
+    })
+  ]
+}
+```
